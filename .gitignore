@@ -102,3 +102,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# old gitignore
+.gradle
+/local.properties
+/build
+/captures
+*.iml
+.idea
+*.apk #optional
+.DS_Store
+out
