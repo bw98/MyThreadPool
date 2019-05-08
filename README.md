@@ -9,6 +9,9 @@
 ##### 4、请求队列（RequestQueue）,它是线程安全优先级阻塞队列，用于存放和获取请求
 ##### 5、结果字典（resultDict）,它是字典，用于存储请求执行后返回的结果
 <br></br>
+## 模型示例图
+[![EcAG6K.md.png](https://s2.ax1x.com/2019/05/08/EcAG6K.md.png)](https://imgchr.com/i/EcAG6K)
+<br></br>
 ## 各代码介绍
 ##### BlockPriorityQueue.py：构建线程安全的优先级阻塞队列
 ##### TestUnitForBPQueue.py：优先级阻塞队列的测试文件，写了一个基本生产者消费者示例用于测试队列的鲁棒性
