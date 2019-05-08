@@ -133,7 +133,8 @@ class MyThreadPool:
                         raise Exception('id为 {} 的请求结果并不在结果字典中'.format(work_request.work_request_id))
                     elif work_request.do_res_callback is not None:
                         res = self.result_dict.pop(work_request.work_request_id)
-                        return work_request.do_res_callback(res)
+                        res = work_request.do_res_callback(res)
+                        return res
                     else:
                         res = self.result_dict.pop(work_request.work_request_id)
                         return res
