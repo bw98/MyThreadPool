@@ -16,5 +16,5 @@
 ##### TestUnitForPool.py：线程池测试文件，写了一个简单的示例用于测试我的线程池，do_work() 是要执行的目标函数，do_result() 是用于处理结果的函数（可以为空）
 <br></br>
 ## 线程池测试结果
-![TestUnitForPool.py 执行结果图](https://img2018.cnblogs.com/blog/1199740/201905/1199740-20190508190851427-1413365611.png "TestUnitForPool.py 执行结果图")
+![](https://img2018.cnblogs.com/blog/1199740/201905/1199740-20190508190851427-1413365611.png)
 <br></br>
