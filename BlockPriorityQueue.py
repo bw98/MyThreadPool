@@ -12,13 +12,12 @@ class BlockPriorityQueue:
 
     def __init__(self, maxsize=20):
         self._queue = []
-        self._queue_index = 0
+        self._index = 0
         self._count = 0
         self._maxsize = maxsize
-        # three condition constraint one lock
-        self._lock = threading.Lock()
-        self._not_full = threading.Condition(self._lock)
-        self._not_empty = threading.Condition(self._lock)
+        self._lock = threading.Lock()  # two condition keep a same lock
+        self._not_full = threading.Condition(self._lock)  # keep a waiting pool
+        self._not_empty = threading.Condition(self._lock)  # keep a different waiting pool
 
     """
     put()    push item with priority
@@ -36,28 +35,30 @@ class BlockPriorityQueue:
             else:
                 if timeout is not None:
                     timeout = float(timeout)
-                    if timeout < 0:
+                    if timeout < 0.0:
                         raise ValueError("parameter timeout should not be negative")
                     else:
-                        start_time = time.time()
+                        expire_time = time.time() + timeout
                         while self._count >= self._maxsize:
-                            self._not_full.wait(timeout=timeout)
-                        end_time = time.time()
-                        if (end_time - start_time) >= timeout:
-                            raise Exception("wait operation time is out of expectation")
+                            remain_time = expire_time - time.time()
+                            if remain_time <= 0.0:
+                                raise Exception("wait time of put() operation is out of expectation")
+                            self._not_full.wait(remain_time)
                 else:
                     while self._count >= self._maxsize:
                         self._not_full.wait()
 
-            heapq.heappush(self._queue, (-priority, self._queue_index, item))
-            self._queue_index += 1
+            heapq.heappush(self._queue, (-priority, self._index, item))
+            self._index += 1
             self._count += 1
-            self._not_empty.notify()
+            self._not_empty.notify(n=1)
+
     """
     get()    get the greatest priority item
     @:parameter    block    could set whether block
     @:parameter  timeout    could set timeout length, if wait operation period is greater than timeout, then raise Exception
     """
+
     def get(self, block=True, timeout=None):
         with self._not_empty:
             if not block:
@@ -66,21 +67,22 @@ class BlockPriorityQueue:
             else:
                 if timeout is not None:
                     timeout = float(timeout)
-                    if timeout < 0:
+                    if timeout < 0.0:
                         raise ValueError("parameter timeout should not be negative")
                     else:
-                        start_time = time.time()
-                        while self._count <= 0:
-                            self._not_empty.wait(timeout=timeout)
-                        end_time = time.time()
-                        if end_time - start_time >= timeout:
-                            raise Exception("wait operation time is out of expectation")
+                        expire_time = time.time() + timeout
+                        while self._count <= 0:  # 必须用while，因为多核情况下即使是notify(n=1)也可能唤醒多个线程
+                            remain_time = expire_time - time.time()
+                            if remain_time <= 0.0:
+                                raise Exception("wait time of get() operation is out of expectation")
+                            self._not_empty.wait(timeout=remain_time)
                 else:
                     while self._count <= 0:
                         self._not_empty.wait()
-            self._count -= 1
+
             item = heapq.heappop(self._queue)[-1]
-            self._not_full.notify()
+            self._count -= 1
+            self._not_full.notify(n=1)
             return item
 
     def print_queue(self):

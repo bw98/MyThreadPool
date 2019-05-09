@@ -4,19 +4,21 @@ import time
 
 
 # MyThreadPool 测试单元
+# 目标函数
 def do_work(data):
-    time.sleep(random.choice([1, 2, 3, 4, 5]))
+    time.sleep(random.choice([1, 2, 3]))
     res = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())) + '    ' + str(data)
     return res
 
 
+# 结果处理函数
 def do_result(res):
     res = res + '     蔡徐坤打篮球'
     return res
 
 
 if __name__ == '__main__':
-    thread_pool = MyThreadPool(req_que_size=5, worker_num=3, timeout=10)  # 初始化线程池实例
+    thread_pool = MyThreadPool(req_que_size=5, worker_num=3, timeout=6)  # 初始化线程池实例
     all_requests = []
     print('-' * 30 + '开始创建请求' + '-' * 30)
     for i in range(10):
@@ -30,5 +32,7 @@ if __name__ == '__main__':
 
     for request in all_requests:
         print('id为{}的请求得到的结果为：{}'.format(request.work_request_id, thread_pool.get_result(work_request=request)))
+    print('-' * 30 + '所有请求的结果已得到' + '-' * 30)
 
-    thread_pool.stop(block=False)
+    thread_pool.stop(block=True)
+

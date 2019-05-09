@@ -58,7 +58,7 @@ class MyThreadPool:
     @:parameter    worker_num      工作线程数量
     """
 
-    def __init__(self, req_que_size=100, worker_num=10, timeout=5.0):
+    def __init__(self, worker_num=10, req_que_size=100, timeout=3.0):
         self.request_queue = BlockPriorityQueue(maxsize=req_que_size)  # 请求队列
         self.result_dict = {}  # 结果字典
         self.timeout = timeout
@@ -76,7 +76,7 @@ class MyThreadPool:
     def submit_request(self, work_request, priority=0):
         if not isinstance(work_request, WorkRequest):
             raise TypeError("work_request must be WorkRequest Type")
-        self.request_queue.put(item=work_request, priority=priority)
+        self.request_queue.put(item=work_request, priority=priority, timeout=self.timeout)
 
     """
     create_worker()    创建work_num个工作线程
@@ -84,8 +84,9 @@ class MyThreadPool:
 
     def create_worker(self, number: int):
         for i in range(number):
-            self.workers.append(
-                WorkThread(request_queue=self.request_queue, result_dict=self.result_dict, timeout=self.timeout))
+            work = WorkThread(request_queue=self.request_queue, result_dict=self.result_dict, timeout=self.timeout)
+            self.workers.append(work)
+            work.start()
 
     """
     get_workers_len()    得到当前未被关闭的工作线程的总个数
@@ -93,6 +94,13 @@ class MyThreadPool:
 
     def get_workers_len(self):
         return len(self.workers)
+
+    """
+    get_closed_workers_len()    得到当前被关闭的工作线程的总个数
+    """
+
+    def get_closed_workers_len(self):
+        return len(self.closed_workers)
 
     """
     close_worker()    关闭number个数的工作线程
@@ -119,14 +127,19 @@ class MyThreadPool:
     @:parameter    work_request    工作请求实例
     """
 
-    def get_result(self, work_request: WorkRequest):
+    def get_result(self, work_request: WorkRequest, poll_timeout=None):
+        if poll_timeout is None:
+            timeout = self.timeout
+        else:
+            timeout = float(poll_timeout)
         start_time = time.time()
         while True:
             if work_request.work_request_id not in self.result_dict:
-                if time.time() - start_time >= self.timeout:
+                if (time.time() - start_time) >= timeout:
                     print("id为 {} 的请求结果并不在结果字典中".format(work_request.work_request_id))
                     break
-                continue
+                else:
+                    continue
             else:
                 try:
                     if work_request.work_request_id not in self.result_dict:
@@ -167,15 +180,14 @@ class WorkThread(threading.Thread):
         self.setDaemon(daemonic=True)
         self.result_dict = result_dict
         self.timeout = timeout
-        self.closed = threading.Event()
-        self.start()
+        self.closed = False
 
     """
     close()     设置该工作线程的closed标志为True
     """
 
     def close(self):
-        self.closed.set()
+        self.closed = True
 
     """
     run()       工作线程主方法，工作线程是一个守护线程，需要从请求队列中获取请求并执行，执行完成后将结果添加到结果队列
@@ -183,7 +195,7 @@ class WorkThread(threading.Thread):
 
     def run(self):
         while True:
-            if self.closed.is_set():
+            if self.closed:
                 break
 
             try:
@@ -191,9 +203,6 @@ class WorkThread(threading.Thread):
             except Exception as e:
                 print("线程{}从请求队列中获取请求失败，报错如下:{}".format(self.getName(), e))
                 continue
-
-            if self.closed.is_set():
-                break
 
             try:
                 if callable(work_request.func):  # 请求对象的目标函数是否可调用
@@ -204,3 +213,4 @@ class WorkThread(threading.Thread):
                     raise Exception('得到的请求对象中的目标函数不可调用')
             except Exception as e:
                 self.result_dict[work_request.work_request_id] = e
+                continue
